@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>动态日历</title>
+<style>
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+  }
+
+  .calendar-widget {
+    display: flex;
+    flex-direction: row;
+    border-radius: 12px;
+    padding: 8px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    width: fit-content; /* 🚀 只包裹内容，避免被撑大 */
+  }
+
+  /* 左侧面板 */
+  .left {
+    flex: none;
+    width: 120px;
+    text-align: center;
+    padding: 8px;
+    background: #f0f0f0;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .left .year-month {
+    font-size: 20px;
+    font-weight: bold;
+    color: #000;
+    margin: -4px 0 2px 0;
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  }
+
+  .left .big-date {
+    font-size: 50px;
+    font-weight: bold;
+    color: #000;
+    margin: 10px 0;
+    font-family: "Times New Roman", serif;
+  }
+
+  .left .lunar-week,
+  .left .day-week {
+    font-size: 14px;
+    color: #666;
+    margin: 4px 0;
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  }
+
+  /* 右侧日历 */
+  .right {
+    flex: none; /* ❌ 不要自动占满 */
+    padding-left: 6px;
+    padding-top: 8px;
+    padding-bottom: 4px;
+  }
+
+  .calendar {
+    display: inline-grid;    
+    grid-template-columns: repeat(7, 24px); /* 每列固定宽度 */
+    gap: 3.5px; /* 紧凑的间距 */
+  }
+
+  .calendar div {
+    text-align: center;
+    border-radius: 50%;
+    font-family: "Times New Roman", serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .calendar .header {
+    font-weight: bold;
+    font-family: "楷体", "SimKai", "KaiTi", serif;
+    color: #333;
+    border-radius: 0;
+    font-size: 12px;
+  }
+
+  .calendar .today {
+    background: #000;
+    color: #fff;
+    font-weight: bold;
+    border-radius: 50%;
+  }
+
+  @media (max-width: 500px) {
+    .calendar-widget {
+      flex-direction: column;
+      align-items: center;
+    }
+    .left {
+      margin-bottom: 8px;
+      width: 80%;
+    }
+    .right {
+      padding-left: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="calendar-widget">
+  <div class="left">
+    <div class="year-month" id="year-month"></div>
+    <div class="big-date" id="big-date"></div>
+    <div class="lunar-week" id="lunar-week"></div>
+    <div class="day-week" id="day-week"></div>
+  </div>
+  <div class="right">
+    <div class="calendar" id="calendar"></div>
+  </div>
+</div>
+
+<!-- 引入 lunar-javascript 精确农历库 -->
+<script src="https://cdn.jsdelivr.net/npm/lunar-javascript/lunar.js"></script>
+<script>
+const today = new Date();
+const monthNames = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+const weekNames = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+
+// 精确农历
+function getLunarDate(date){
+  const lunar = Lunar.fromDate(date);
+  const lunarMonth = lunar.getMonthInChinese() + "月";
+  const lunarDay = lunar.getDayInChinese();
+  return lunarMonth + lunarDay;
+}
+
+// 第 n 天
+function getDayNumber(date){
+  const start=new Date(2025,8,1);
+  const diff=Math.floor((date-start)/(1000*60*60*24))+1;
+  return diff>0?diff:1;
+}
+
+// 第 n 周
+function getWeekNumber(date){
+  const start=new Date(2025,8,7);
+  const diffDays=Math.floor((date-start)/(1000*60*60*24));
+  return diffDays>=0?Math.floor(diffDays/7)+1:1;
+}
+
+// 左面板显示
+document.getElementById("year-month").textContent = today.getFullYear()+"年"+monthNames[today.getMonth()];
+document.getElementById("big-date").textContent = today.getDate();
+document.getElementById("lunar-week").textContent = getLunarDate(today)+"  "+weekNames[today.getDay()];
+document.getElementById("day-week").textContent = "第"+getDayNumber(today)+"天 第"+getWeekNumber(today)+"周";
+
+// 右日历生成
+function generateCalendar(year, month){
+  const calendar=document.getElementById("calendar");
+  calendar.innerHTML="";
+
+  const weekHeader=["日","一","二","三","四","五","六"];
+  for(let w of weekHeader){
+    const div=document.createElement("div");
+    div.textContent=w;
+    div.className="header";
+    calendar.appendChild(div);
+  }
+
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+
+  for(let i=0;i<firstDay;i++){
+    const div=document.createElement("div");
+    div.textContent="";
+    calendar.appendChild(div);
+  }
+
+  for(let d=1;d<=daysInMonth;d++){
+    const div=document.createElement("div");
+    div.textContent=d;
+    if(d===today.getDate() && month===today.getMonth() && year===today.getFullYear()){
+      div.classList.add("today");
+    }
+    calendar.appendChild(div);
+  }
+}
+
+generateCalendar(today.getFullYear(), today.getMonth());
+</script>
+</body>
+</html>
